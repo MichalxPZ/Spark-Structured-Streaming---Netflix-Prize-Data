@@ -2,11 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/NetflixProducer/NetflixProducer.iml" filepath="$PROJECT_DIR$/NetflixProducer/NetflixProducer.iml" />
       <module fileurl="file://$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/SparkSructuredStreaming.bigdata.iml" filepath="$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/SparkSructuredStreaming.bigdata.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bigdata.iml" filepath="$PROJECT_DIR$/.idea/modules/bigdata.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bigdata-build.iml" filepath="$PROJECT_DIR$/.idea/modules/bigdata-build.iml" />
       <module fileurl="file://$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/project.bigdata-build.iml" filepath="$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/project.bigdata-build.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/sparkstructuredstreaming-bigdataput.iml" filepath="$PROJECT_DIR$/.idea/modules/sparkstructuredstreaming-bigdataput.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/sparkstructuredstreaming-bigdataput-build.iml" filepath="$PROJECT_DIR$/.idea/modules/sparkstructuredstreaming-bigdataput-build.iml" />
     </modules>
   </component>
 </project>

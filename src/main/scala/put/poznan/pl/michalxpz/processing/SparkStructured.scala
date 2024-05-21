@@ -1,6 +1,8 @@
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+package put.poznan.pl.michalxpz.processing
+
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 import java.net.InetAddress
 

@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="NetflixProducer:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/NetflixProducer_jar</output-path>
-    <root id="archive" name="NetflixProducer.jar">
-      <element id="module-output" name="NetflixProducer" />
-    </root>
-  </artifact>
-</component>

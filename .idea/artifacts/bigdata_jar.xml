@@ -1,0 +1,15 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="bigdata:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/bigdata_jar</output-path>
+    <root id="archive" name="bigdata.jar">
+      <element id="module-output" name="bigdata" />
+      <element id="module-output" name="bigdata-build" />
+      <element id="module-output" name="SparkSructuredStreaming.bigdata" />
+      <element id="module-output" name="project.bigdata-build" />
+      <element id="library" level="module" name="sbt: unmanaged-sources-and-docs" module-name="SparkSructuredStreaming.bigdata" />
+      <element id="library" level="module" name="sbt: unmanaged-sources-and-docs" module-name="bigdata" />
+      <element id="library" level="project" name="sbt: scala-sdk-2.12.19" />
+      <element id="extracted-dir" path="$USER_HOME$/.sbt/boot/scala-2.12.19/lib/scala-library.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
