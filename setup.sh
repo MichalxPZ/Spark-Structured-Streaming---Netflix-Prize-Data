@@ -45,6 +45,9 @@ echo "Kafka topics created successfully."
 # Uruchomienie kontenera Docker z bazą danych PostgreSQL
 echo "Starting PostgreSQL container..."
 docker run --name postgresdb -p 8432:5432 -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+# Opóźnienie przed wykonaniem skryptu SQL
+echo "Waiting for PostgreSQL container to start..."
+sleep 10
 echo "PostgreSQL container started successfully."
 
 # Wykonanie skryptu SQL

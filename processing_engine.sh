@@ -1,1 +1,1 @@
-source ./setup_vars.sh
+source ./env.sh
