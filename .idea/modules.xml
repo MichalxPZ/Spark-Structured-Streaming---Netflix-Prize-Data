@@ -4,7 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/SparkSructuredStreaming.bigdata.iml" filepath="$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/SparkSructuredStreaming.bigdata.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/bigdata.iml" filepath="$PROJECT_DIR$/.idea/modules/bigdata.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bigdata-build.iml" filepath="$PROJECT_DIR$/.idea/modules/bigdata-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bigdata.bigdata-build.iml" filepath="$PROJECT_DIR$/.idea/modules/bigdata.bigdata-build.iml" />
       <module fileurl="file://$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/project.bigdata-build.iml" filepath="$PROJECT_DIR$/SparkSructuredStreaming/.idea/modules/project.bigdata-build.iml" />
     </modules>
   </component>

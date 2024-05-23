@@ -16,12 +16,14 @@ object StandardOutputConsumer extends App {
   properties.put("group.id", args(1))
   properties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
   properties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-
+  System.out.println(properties)
+  System.out.println("Starting consumer")
   val consumer = new KafkaConsumer[String, String](properties)
+  System.out.println("Subscribing to: " + args(2))
   consumer.subscribe(singletonList(args(2)))
   while (true) {
     val results = consumer.poll(Duration.ofSeconds(6000)).asScala
-    results.foreach( data => println(data.value())
+    results.foreach( data => System.out.println(data.value())
     )
   }
   consumer.close()

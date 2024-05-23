@@ -11,6 +11,11 @@ echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/a
 echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
 echo "Sbt repository added successfully."
 
+# Pobieranie sterownika JDBC
+echo "Downloading JDBC driver..."
+wget https://jdbc.postgresql.org/download/postgresql-42.6.0.jar
+echo "JDBC driver downloaded successfully."
+
 # Aktualizacja listy pakietów
 echo "Updating package lists..."
 curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add

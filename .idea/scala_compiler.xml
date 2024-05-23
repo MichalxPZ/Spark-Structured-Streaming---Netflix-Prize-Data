@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="sbt 1" modules="SparkSructuredStreaming,SparkSructuredStreaming.bigdata,SparkStructuredStreaming -BigDataPUT,bigdata,sparkstructuredstreaming-bigdataput" />
+    <profile name="sbt 1" modules="SparkSructuredStreaming,SparkSructuredStreaming.bigdata,SparkStructuredStreaming -BigDataPUT,sparkstructuredstreaming-bigdataput" />
+    <profile name="sbt 2" modules="bigdata">
+      <parameters>
+        <parameter value="-target:jvm-1.8" />
+      </parameters>
+    </profile>
   </component>
 </project>

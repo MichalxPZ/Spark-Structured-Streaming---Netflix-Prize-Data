@@ -9,8 +9,10 @@ object JdbcConsumer extends App {
 
   var connection: Connection = _
   try {
-    Class.forName("com.mysql.cj.jdbc.Driver")
+    Class.forName("org.postgresql.Driver")
     connection = DriverManager.getConnection(args(0), args(1), args(2))
+    System.out.println("Connected to database")
+
     val statement = connection.createStatement
     while(true) {
       val result = statement.executeQuery("SELECT * FROM movie_ratings ORDER BY window_start DESC LIMIT 50")

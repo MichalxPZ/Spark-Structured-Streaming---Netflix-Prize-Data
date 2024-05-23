@@ -11,3 +11,10 @@ gcloud dataproc clusters create ${CLUSTER_NAME} \
 --initialization-actions \
 gs://goog-dataproc-initialization-actions-${REGION}/kafka/kafka.sh
 ```
+```shell
+git clone https://github.com/MichalxPZ/Spark-Structured-Streaming---Netflix-Prize-Data.git
+mv Spark-Structured-Streaming---Netflix-Prize-Data/* .
+```
+```shell
+source ./setup.sh
+```

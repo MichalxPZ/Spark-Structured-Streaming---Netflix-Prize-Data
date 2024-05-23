@@ -24,22 +24,31 @@ object NetflixProducer extends App {
   properties.put("buffer.memory", "33554432")
   properties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
   properties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-
+  System.out.println("Starting producer")
+  System.out.println("Directory: " + directory)
+  System.out.println("Sleep time: " + sleepTime)
+  System.out.println("Topic name: " + topicName)
+  System.out.println("Kafka server properties: " + properties)
   val producer = new KafkaProducer[String, String](properties)
   val filePaths = new File(directory).listFiles().map(_.getAbsolutePath).sorted
-
+  System.out.println("Files to process: " + filePaths.mkString(", "))
   filePaths.foreach(path => {
     try {
+      System.out.println("Processing file: " + path)
       Files.lines(Paths.get(path)).
         skip(1).
         forEach(
           new Consumer[String] {
-            override def accept(t: String): Unit = producer.send(new ProducerRecord[String, String](topicName, t.split(',')(0), t))
+            override def accept(t: String): Unit = {
+              producer.send(new ProducerRecord[String, String](topicName, t.split(',')(0), t))
+              System.out.println("Sent record: " + t)
+            }
           })
       TimeUnit.SECONDS.sleep(sleepTime.toInt)
     } catch {
       case e: Throwable => e.printStackTrace()
     }
   })
+  System.out.println("Closing producer")
   producer.close()
 }
