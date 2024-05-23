@@ -1,6 +1,6 @@
 DROP DATABASE IF EXISTS :"db_name";
-DROP USER IF EXISTS :"user";
 CREATE DATABASE :"db_name" WITH ENCODING 'UTF8';
+DROP USER IF EXISTS :"user";
 CREATE USER :"user" WITH PASSWORD :'password';
 GRANT ALL PRIVILEGES ON DATABASE :"db_name" TO :"user";
 
@@ -15,3 +15,4 @@ CREATE TABLE IF NOT EXISTS movie_ratings (
      unique_rating_count INTEGER NOT NULL,
      PRIMARY KEY (window_start, movie_id)
 );
+GRANT ALL PRIVILEGES ON TABLE movie_ratings TO :"user";

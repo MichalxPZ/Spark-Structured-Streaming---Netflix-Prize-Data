@@ -21,7 +21,7 @@ echo "Kafka parameters set up successfully."
 
 # JDBC parameters
 echo "Setting up JDBC parameters..."
-export JDBC_URL="jdbc:postgres://${CLUSTER_NAME}-m:5432/netflix_ratings"
+export JDBC_URL="jdbc:postgresql://localhost:8432/netflix_ratings"
 export JDBC_USERNAME="streamuser"
 export JDBC_PASSWORD="stream"
 export JDBC_DATABASE="netflix_ratings"
