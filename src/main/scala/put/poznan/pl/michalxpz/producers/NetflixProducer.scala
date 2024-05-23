@@ -41,7 +41,6 @@ object NetflixProducer extends App {
           new Consumer[String] {
             override def accept(t: String): Unit = {
               producer.send(new ProducerRecord[String, String](topicName, t.split(',')(0), t))
-              System.out.println("Sent record: " + t)
             }
           })
       TimeUnit.SECONDS.sleep(sleepTime.toInt)
