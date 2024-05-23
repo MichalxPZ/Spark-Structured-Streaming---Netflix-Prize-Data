@@ -56,7 +56,6 @@ object SparkStructured {
         sum("rating").as("ratingSum"),
         countDistinct("rating").as("uniqueRatingCount")
       )
-    aggregatedRatingsDF.show()
     val jdbcProperties = new Properties()
     jdbcProperties.put("user", jdbcUser)
     jdbcProperties.put("password", jdbcPassword)
@@ -82,7 +81,6 @@ object SparkStructured {
         mean("rating").as("ratingMean")
       )
       .filter($"ratingCount" >= anomalyRatingCountThreshold && $"ratingMean" >= anomalyRatingMeanThreshold)
-    anomaliesDF.show()
     val anomaliesQuery = anomaliesDF
       .selectExpr("CAST(movieId AS STRING) AS key", "to_json(struct(*)) AS value")
       .writeStream
