@@ -43,14 +43,11 @@ object SparkStructured {
       .option("subscribe", kafkaTopic)
       .option("startingOffsets", "latest")
       .load()
-    System.out.println("Connected to Kafka")
     val ratingsDF = kafkaDF.selectExpr("CAST(value AS STRING)")
       .select(from_json($"value", schema).as("data"))
       .select("data.*")
       .withColumn("timestamp", to_timestamp($"timestamp", "yyyy-MM-dd"))
-    System.out.println("Data loaded from Kafka")
     val watermarkedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
-    System.out.println("Watermark set")
     // Aggregated ratings calculation
     val aggregatedRatingsDF = watermarkedRatingsDF
       .groupBy(window($"timestamp", "30 days"), $"movieId")
@@ -64,7 +61,6 @@ object SparkStructured {
     jdbcProperties.put("user", jdbcUser)
     jdbcProperties.put("password", jdbcPassword)
     jdbcProperties.put("driver", "org.postgresql.Driver")
-    System.out.println("Starting processing")
     val aggregatedRatingsQuery = aggregatedRatingsDF
       .writeStream
       .outputMode("update")
@@ -78,7 +74,6 @@ object SparkStructured {
       .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings")
       .trigger(Trigger.ProcessingTime("1 day"))
       .start()
-    System.out.println("Processing started")
     // Anomaly detection
     val anomaliesDF = watermarkedRatingsDF
       .groupBy(window($"timestamp", s"$slidingWindowSizeDays days", "1 day"), $"movieId")
