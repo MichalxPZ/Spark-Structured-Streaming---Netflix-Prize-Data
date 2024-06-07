@@ -1,7 +1,97 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import split, from_json, to_timestamp, window, count, sum, approx_count_distinct, mean, col, to_timestamp
+from pyspark.sql.functions import split, concat, from_json, to_timestamp, window, lit, count, sum, approx_count_distinct, mean, col, to_timestamp
 from pyspark.sql.types import StructType, StringType, IntegerType, TimestampType
 import sys
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshold, anomaly_rating_mean_threshold, kafka_bootstrap_servers, kafka_anomaly_topic, movies, groupId):
+    watermarkedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
+    anomaliesDF = watermarkedRatingsDF \
+        .groupBy(window("timestamp", f"{sliding_window_size_days} days", "1 day"), "movie_id") \
+        .agg(
+        count("*").alias("ratingCount"),
+        mean("rating").alias("ratingMean")
+    ) \
+        .filter(f"ratingCount >= {anomaly_rating_count_threshold} AND ratingMean >= {anomaly_rating_mean_threshold}")
+
+    anomalies_joined = anomaliesDF.join(movies, anomaliesDF.movie_id == movies["_c0"], "inner") \
+        .select(col("window.end").alias("window_end"), col("window.start").alias("window_start"), "movie_id", col("_c2").alias("title"), col("_c1").alias("Year"),"ratingCount", "ratingMean")
+
+    anomalies_formatted = anomalies_joined.select(concat(
+        col("window_start"),
+        lit(","),
+        col("window_end"),
+        lit(","),
+        col("title"),
+        lit(","),
+        col("ratingCount"),
+        lit(","),
+        col("ratingMean"),
+    ).alias("value"))
+
+    anomalies_formatted.writeStream \
+        .outputMode("append") \
+        .format("console") \
+        .start()
+
+    anomaliesQuery = anomalies_formatted \
+        .writeStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
+        .option("topic", kafka_anomaly_topic) \
+        .option("group.id", groupId) \
+        .option("checkpointLocation", "/tmp/checkpoints/anomalies") \
+        .start()
+
+
+
+def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, processing_mode):
+    aggregatedRatingsDF = ratingsDF
+    if processing_mode == "C":
+        aggregatedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
+
+    aggregatedRatingsDF = aggregatedRatingsDF.groupBy(window("timestamp", "30 days"), "movie_id") \
+        .agg(
+        count("*").alias("rating_count"),
+        sum("rating").alias("rating_sum"),
+        approx_count_distinct("rating").alias("unique_rating_count")
+    ) \
+        .join(movies, aggregatedRatingsDF.movie_id == movies["_c0"], "inner") \
+        .select(col("window.start").alias("window_start"), "movie_id", col("_c2").alias("title"), "rating_count", "rating_sum", "unique_rating_count") \
+
+    jdbcProperties = {
+        "user": jdbc_user,
+        "password": jdbc_password,
+        "driver": "org.postgresql.Driver"
+    }
+
+    aggregatedRatingsDF.printSchema()
+    if processing_mode == "A":
+        aggregatedRatingsQuery = aggregatedRatingsDF \
+            .writeStream \
+            .outputMode("update") \
+            .foreachBatch(lambda batchDF, batchId: save_to_jdbc(batchDF, jdbc_url, jdbcProperties)) \
+            .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
+            .trigger(processingTime="1 day") \
+            .start()
+    if processing_mode == "C":
+        aggregatedRatingsQuery = aggregatedRatingsDF \
+            .writeStream \
+            .outputMode("append") \
+            .foreachBatch(lambda batchDF, batchId: save_to_jdbc(batchDF, jdbc_url, jdbcProperties)) \
+            .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
+            .trigger(processingTime="1 day") \
+            .start()
+
+
+def save_to_jdbc(batchDF, jdbc_url, jdbcProperties, mode="append"):
+    batchDF.show(truncate=False)
+    batchDF.write.mode(mode).jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)
+
 
 def main():
     if len(sys.argv) != 13:
@@ -28,6 +118,7 @@ def main():
         .format("kafka") \
         .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
         .option("subscribe", kafka_topic) \
+        .option("group.id", group_id) \
         .option("startingOffsets", "latest") \
         .load()
 
@@ -43,61 +134,8 @@ def main():
     ratingsDF.printSchema()
     movies.printSchema()
 
-    aggregatedRatingsDF = ratingsDF
-    if processing_mode == "C":
-        aggregatedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
-
-    aggregatedRatingsDF = aggregatedRatingsDF.groupBy(window("timestamp", "30 days"), "movie_id") \
-        .agg(
-        count("*").alias("rating_count"),
-        sum("rating").alias("rating_sum"),
-        approx_count_distinct("rating").alias("unique_rating_count")
-    ) \
-        .select(col("window.start").alias("window_start"), "movie_id", "rating_count", "rating_sum", "unique_rating_count")
-
-    jdbcProperties = {
-        "user": jdbc_user,
-        "password": jdbc_password,
-        "driver": "org.postgresql.Driver"
-    }
-
-    if processing_mode == "A":
-        aggregatedRatingsQuery = aggregatedRatingsDF \
-            .writeStream \
-            .outputMode("update") \
-            .foreachBatch(lambda batchDF, _: batchDF.write.mode("append").jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)) \
-            .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
-            .trigger(processingTime="1 day") \
-            .start()
-    if processing_mode == "C":
-        aggregatedRatingsQuery = aggregatedRatingsDF \
-            .writeStream \
-            .outputMode("append") \
-            .foreachBatch(lambda batchDF, _: batchDF.write.mode("append").jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)) \
-            .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
-            .trigger(processingTime="1 day") \
-            .start()
-
-
-    anomaliesDF = aggregatedRatingsDF \
-        .groupBy(window("timestamp", f"{sliding_window_size_days} days", "1 day"), "movie_id") \
-        .agg(
-        count("*").alias("ratingCount"),
-        mean("rating").alias("ratingMean")
-    ) \
-        .filter(f"rating_count >= {anomaly_rating_count_threshold} AND ratingMean >= {anomaly_rating_mean_threshold}")
-
-    anomalies_joined = anomaliesDF.join(movies, anomaliesDF.movie_id == movies["_c0"], "inner")
-
-    anomaliesQuery = anomalies_joined \
-        .selectExpr("CAST(movie_id AS STRING) AS key", "to_json(struct(*)) AS value") \
-        .writeStream \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
-        .option("topic", kafka_anomaly_topic) \
-        .option("checkpointLocation", "/tmp/checkpoints/anomalies") \
-        .trigger(processingTime="1 day") \
-        .start()
+    real_time_processing(ratingsDF,movies, jdbc_url, jdbc_user, jdbc_password, processing_mode)
+    anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshold, anomaly_rating_mean_threshold, kafka_bootstrap_servers, kafka_anomaly_topic, movies, group_id)
 
     spark.streams.awaitAnyTermination()
 
