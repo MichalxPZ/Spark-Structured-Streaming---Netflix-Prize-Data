@@ -3,6 +3,7 @@ from pyspark.sql.functions import split, concat, from_json, to_timestamp, window
 from pyspark.sql.types import StructType, StringType, IntegerType, TimestampType
 import sys
 import logging
+import socket
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,10 +39,11 @@ def anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshol
         .format("console") \
         .start()
 
+    host_name = socket.gethostname()
     anomaliesQuery = anomalies_formatted \
         .writeStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
+        .option("kafka.bootstrap.servers", f"{host_name}:9092") \
         .option("topic", kafka_anomaly_topic) \
         .option("group.id", groupId) \
         .option("checkpointLocation", "/tmp/checkpoints/anomalies") \
@@ -114,9 +116,10 @@ def main():
         .appName("Netflix Prize Data processing") \
         .getOrCreate()
 
+    host_name = socket.gethostname()
     kafkaDF = spark.readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
+        .option("kafka.bootstrap.servers", f"{host_name}:9092") \
         .option("subscribe", kafka_topic) \
         .option("group.id", group_id) \
         .option("startingOffsets", "latest") \
