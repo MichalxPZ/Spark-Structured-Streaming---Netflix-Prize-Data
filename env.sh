@@ -7,7 +7,7 @@ export CLUSTER_NAME=$(/usr/share/google/get_metadata_value attributes/dataproc-c
 export HADOOP_CONF_DIR=/etc/hadoop/conf
 export HADOOP_CLASSPATH=`hadoop classpath`
 export INPUT_DIRECTORY_PATH="$HOME/netflix-prize-data"
-export INPUT_FILE_PATH="$HOME/movie_titles.csv"
+export INPUT_FILE_PATH="gs://${BUCKET_NAME}/movie_titles.csv"
 echo "Cloud parameters set up successfully."
 
 # Kafka parameters
@@ -33,5 +33,5 @@ echo "Setting up Processing Engine parameters..."
 export ANOMALY_PERIOD_LENGTH=30
 export ANOMALY_RATING_COUNT=70
 export ANOMALY_RATING_MEAN=4
-export PROCESSING_TYPE="H" # H for historical, S for Stream
+export PROCESSING_TYPE="A"
 echo "Processing Engine parameters set up successfully."

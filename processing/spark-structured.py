@@ -1,10 +1,10 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, to_timestamp, window, count, sum, countDistinct, mean
-from pyspark.sql.types import StructType, StringType, IntegerType
+from pyspark.sql.functions import split, from_json, to_timestamp, window, count, sum, approx_count_distinct, mean, col, to_timestamp
+from pyspark.sql.types import StructType, StringType, IntegerType, TimestampType
 import sys
 
 def main():
-    if len(sys.argv) != 12:
+    if len(sys.argv) != 13:
         raise Exception("Usage: script <input_file_path> <kafka_bootstrap_servers> <kafka_topic> <group_id> <jdbc_url> <jdbc_user> <jdbc_password> <sliding_window_size_days> <anomaly_rating_count_threshold> <anomaly_rating_mean_threshold> <kafka_anomaly_topic>")
 
     input_file_path = sys.argv[1]
@@ -18,16 +18,11 @@ def main():
     anomaly_rating_count_threshold = int(sys.argv[9])
     anomaly_rating_mean_threshold = float(sys.argv[10])
     kafka_anomaly_topic = sys.argv[11]
+    processing_mode = sys.argv[12]
 
     spark = SparkSession.builder \
         .appName("Netflix Prize Data processing") \
         .getOrCreate()
-
-    schema = StructType() \
-        .add("timestamp", StringType()) \
-        .add("movieId", IntegerType()) \
-        .add("userId", StringType()) \
-        .add("rating", IntegerType())
 
     kafkaDF = spark.readStream \
         .format("kafka") \
@@ -36,20 +31,29 @@ def main():
         .option("startingOffsets", "latest") \
         .load()
 
-    ratingsDF = kafkaDF.selectExpr("CAST(value AS STRING)") \
-        .select(from_json("value", schema).alias("data")) \
-        .select("data.*") \
-        .withColumn("timestamp", to_timestamp("timestamp", "yyyy-MM-dd"))
+    movies = spark.read.option("header", False).csv(input_file_path)
 
-    watermarkedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
+    data = kafkaDF.selectExpr("CAST(value AS STRING)").alias("value")
+    split_columns = split(data["value"], ",")
+    ratingsDF = data.withColumn("timestamp", to_timestamp(split_columns[0], "yyyy-MM-dd")) \
+        .withColumn("movie_id", split_columns[1].cast(IntegerType())) \
+        .withColumn("user_id", split_columns[2].cast(StringType())) \
+        .withColumn("rating", split_columns[3].cast(IntegerType())) \
+        .drop("value")
+    ratingsDF.printSchema()
+    movies.printSchema()
 
-    aggregatedRatingsDF = watermarkedRatingsDF \
-        .groupBy(window("timestamp", "30 days"), "movieId") \
+    aggregatedRatingsDF = ratingsDF
+    if processing_mode == "C":
+        aggregatedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
+
+    aggregatedRatingsDF = aggregatedRatingsDF.groupBy(window("timestamp", "30 days"), "movie_id") \
         .agg(
-            count("*").alias("ratingCount"),
-            sum("rating").alias("ratingSum"),
-            countDistinct("rating").alias("uniqueRatingCount")
-        )
+        count("*").alias("rating_count"),
+        sum("rating").alias("rating_sum"),
+        approx_count_distinct("rating").alias("unique_rating_count")
+    ) \
+        .select(col("window.start").alias("window_start"), "movie_id", "rating_count", "rating_sum", "unique_rating_count")
 
     jdbcProperties = {
         "user": jdbc_user,
@@ -57,24 +61,36 @@ def main():
         "driver": "org.postgresql.Driver"
     }
 
-    aggregatedRatingsQuery = aggregatedRatingsDF \
-        .writeStream \
-        .outputMode("update") \
-        .foreachBatch(lambda batchDF, _: batchDF.withColumn("window_start", batchDF["window"]["start"]).drop("window").write.mode("append").jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)) \
-        .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
-        .trigger(processingTime="1 day") \
-        .start()
+    if processing_mode == "A":
+        aggregatedRatingsQuery = aggregatedRatingsDF \
+            .writeStream \
+            .outputMode("update") \
+            .foreachBatch(lambda batchDF, _: batchDF.write.mode("append").jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)) \
+            .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
+            .trigger(processingTime="1 day") \
+            .start()
+    if processing_mode == "C":
+        aggregatedRatingsQuery = aggregatedRatingsDF \
+            .writeStream \
+            .outputMode("append") \
+            .foreachBatch(lambda batchDF, _: batchDF.write.mode("append").jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)) \
+            .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
+            .trigger(processingTime="1 day") \
+            .start()
 
-    anomaliesDF = watermarkedRatingsDF \
-        .groupBy(window("timestamp", f"{sliding_window_size_days} days", "1 day"), "movieId") \
+
+    anomaliesDF = aggregatedRatingsDF \
+        .groupBy(window("timestamp", f"{sliding_window_size_days} days", "1 day"), "movie_id") \
         .agg(
-            count("*").alias("ratingCount"),
-            mean("rating").alias("ratingMean")
-        ) \
-        .filter(f"ratingCount >= {anomaly_rating_count_threshold} AND ratingMean >= {anomaly_rating_mean_threshold}")
+        count("*").alias("ratingCount"),
+        mean("rating").alias("ratingMean")
+    ) \
+        .filter(f"rating_count >= {anomaly_rating_count_threshold} AND ratingMean >= {anomaly_rating_mean_threshold}")
 
-    anomaliesQuery = anomaliesDF \
-        .selectExpr("CAST(movieId AS STRING) AS key", "to_json(struct(*)) AS value") \
+    anomalies_joined = anomaliesDF.join(movies, anomaliesDF.movie_id == movies["_c0"], "inner")
+
+    anomaliesQuery = anomalies_joined \
+        .selectExpr("CAST(movie_id AS STRING) AS key", "to_json(struct(*)) AS value") \
         .writeStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
