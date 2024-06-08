@@ -37,7 +37,7 @@ echo "Input data directory created successfully."
 
 # Pobieranie plików z GCS
 echo "Copying input files from GCS..."
-hadoop fs -copyToLocal gs://"${BUCKET_NAME}"/netflix-prize-data/*.txt "$INPUT_DIRECTORY_PATH"
+hadoop fs -copyToLocal gs://"${BUCKET_NAME}"/netflix-prize-data/*.csv "$INPUT_DIRECTORY_PATH"
 echo "Input files copied successfully."
 
 # Tworzenie tematów Kafka

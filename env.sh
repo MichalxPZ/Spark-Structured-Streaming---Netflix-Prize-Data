@@ -30,8 +30,8 @@ echo "JDBC parameters set up successfully."
 
 # Processing Engine parameters
 echo "Setting up Processing Engine parameters..."
-export ANOMALY_PERIOD_LENGTH=30
-export ANOMALY_RATING_COUNT=70
-export ANOMALY_RATING_MEAN=4
+export ANOMALY_PERIOD_LENGTH=1
+export ANOMALY_RATING_COUNT=2
+export ANOMALY_RATING_MEAN=2
 export PROCESSING_TYPE="A"
 echo "Processing Engine parameters set up successfully."

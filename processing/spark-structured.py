@@ -5,7 +5,7 @@ import sys
 import logging
 import socket
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
@@ -34,21 +34,14 @@ def anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshol
         col("ratingMean"),
     ).alias("value"))
 
-    anomalies_formatted.writeStream \
-        .outputMode("append") \
-        .format("console") \
-        .start()
-
     host_name = socket.gethostname()
     anomaliesQuery = anomalies_formatted \
         .writeStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", f"{host_name}:9092") \
         .option("topic", kafka_anomaly_topic) \
-        .option("group.id", groupId) \
         .option("checkpointLocation", "/tmp/checkpoints/anomalies") \
         .start()
-
 
 
 def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, processing_mode):
@@ -71,14 +64,13 @@ def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, 
         "driver": "org.postgresql.Driver"
     }
 
-    aggregatedRatingsDF.printSchema()
     if processing_mode == "A":
         aggregatedRatingsQuery = aggregatedRatingsDF \
             .writeStream \
             .outputMode("update") \
             .foreachBatch(lambda batchDF, batchId: save_to_jdbc(batchDF, jdbc_url, jdbcProperties)) \
             .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
-            .trigger(processingTime="1 day") \
+            .trigger(processingTime="20 seconds") \
             .start()
     if processing_mode == "C":
         aggregatedRatingsQuery = aggregatedRatingsDF \
@@ -86,12 +78,11 @@ def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, 
             .outputMode("append") \
             .foreachBatch(lambda batchDF, batchId: save_to_jdbc(batchDF, jdbc_url, jdbcProperties)) \
             .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
-            .trigger(processingTime="1 day") \
+            .trigger(processingTime="20 second") \
             .start()
 
 
 def save_to_jdbc(batchDF, jdbc_url, jdbcProperties, mode="append"):
-    batchDF.show(truncate=False)
     batchDF.write.mode(mode).jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)
 
 
@@ -123,6 +114,7 @@ def main():
         .option("subscribe", kafka_topic) \
         .option("group.id", group_id) \
         .option("startingOffsets", "latest") \
+        .option("failOnDataLoss", "false") \
         .load()
 
     movies = spark.read.option("header", False).csv(input_file_path)
