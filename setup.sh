@@ -42,8 +42,8 @@ echo "Input files copied successfully."
 
 # Tworzenie tematów Kafka
 echo "Creating Kafka topics..."
-kafka-topics.sh --bootstrap-server ${CLUSTER_NAME}-w-1:9092 --create --replication-factor 1 --partitions 1 --topic $KAFKA_ANOMALY_TOPIC_NAME
-kafka-topics.sh --bootstrap-server ${CLUSTER_NAME}-w-1:9092 --create --replication-factor 1 --partitions 1 --topic $KAFKA_DATA_TOPIC_NAME
+kafka-topics.sh --bootstrap-server ${KAFKA_BOOTSTRAP_SERVERS} --create --replication-factor 1 --partitions 1 --topic $KAFKA_ANOMALY_TOPIC_NAME
+kafka-topics.sh --bootstrap-server ${KAFKA_BOOTSTRAP_SERVERS} --create --replication-factor 1 --partitions 1 --topic $KAFKA_DATA_TOPIC_NAME
 echo "Kafka topics created successfully."
 
 # Uruchomienie kontenera Docker z bazą danych PostgreSQL
