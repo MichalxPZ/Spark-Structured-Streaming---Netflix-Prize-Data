@@ -18,7 +18,8 @@ gcloud dataproc clusters create ${CLUSTER_NAME} \
 gs://goog-dataproc-initialization-actions-${REGION}/kafka/kafka.sh
 ```
 
-Pobieramy repozytorium ze skryptami i uruchamiamy skrypt inicjujący
+Pobieramy repozytorium ze skryptami i uruchamiamy skrypt inicjujący środowisko.  
+Alternatywnie możemy rozpakować archiwum z kodem źródłowym.
 ```shell
 git clone https://github.com/MichalxPZ/Spark-Structured-Streaming---Netflix-Prize-Data.git
 mv Spark-Structured-Streaming---Netflix-Prize-Data/* .
