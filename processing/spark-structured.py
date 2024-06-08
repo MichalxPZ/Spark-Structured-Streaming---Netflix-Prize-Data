@@ -137,7 +137,8 @@ def main():
     ratingsDF.printSchema()
     movies.printSchema()
 
-    real_time_processing(ratingsDF,movies, jdbc_url, jdbc_user, jdbc_password, processing_mode)
+    jdbc_url = f"jdbc:postgresql://{host_name}:8432/netflix_ratings"
+    real_time_processing(ratingsDF,movies,  jdbc_url, jdbc_user, jdbc_password, processing_mode)
     anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshold, anomaly_rating_mean_threshold, kafka_bootstrap_servers, kafka_anomaly_topic, movies, group_id)
 
     spark.streams.awaitAnyTermination()
