@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import split, concat, from_json, to_timestamp, window, lit, count, sum, approx_count_distinct, mean, col, to_timestamp
+from pyspark.sql.functions import unix_timestamp, split, concat, from_json, to_timestamp, window, lit, count, sum, approx_count_distinct, mean, col, to_timestamp
 from pyspark.sql.types import StructType, StringType, IntegerType, TimestampType
 import sys
 import logging
@@ -56,7 +56,7 @@ def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, 
         approx_count_distinct("rating").alias("unique_rating_count")
     ) \
         .join(movies, aggregatedRatingsDF.movie_id == movies["_c0"], "inner") \
-        .select(col("window.start").alias("window_start"), "movie_id", col("_c2").alias("title"), "rating_count", "rating_sum", "unique_rating_count") \
+        .select(unix_timestamp(col("window.start")).alias("window_start"), "movie_id", col("_c2").alias("title"), "rating_count", "rating_sum", "unique_rating_count") \
 
     jdbcProperties = {
         "user": jdbc_user,
@@ -75,14 +75,14 @@ def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, 
     if processing_mode == "C":
         aggregatedRatingsQuery = aggregatedRatingsDF \
             .writeStream \
-            .outputMode("append") \
+            .outputMode("complete") \
             .foreachBatch(lambda batchDF, batchId: save_to_jdbc(batchDF, jdbc_url, jdbcProperties)) \
             .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
             .trigger(processingTime="20 second") \
             .start()
 
 
-def save_to_jdbc(batchDF, jdbc_url, jdbcProperties, mode="append"):
+def save_to_jdbc(batchDF, jdbc_url, jdbcProperties, mode="overwrite"):
     batchDF.write.mode(mode).jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)
 
 
