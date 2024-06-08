@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshold, anomaly_rating_mean_threshold, kafka_bootstrap_servers, kafka_anomaly_topic, movies, groupId):
-    watermarkedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
+    watermarkedRatingsDF = ratingsDF.withWatermark("timestamp", "1 days")
     anomaliesDF = watermarkedRatingsDF \
         .groupBy(window("timestamp", f"{sliding_window_size_days} days", "1 day"), "movie_id") \
         .agg(
@@ -47,7 +47,7 @@ def anomalies(ratingsDF, sliding_window_size_days, anomaly_rating_count_threshol
 def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, processing_mode):
     aggregatedRatingsDF = ratingsDF
     if processing_mode == "C":
-        aggregatedRatingsDF = ratingsDF.withWatermark("timestamp", "30 days")
+        aggregatedRatingsDF = ratingsDF.withWatermark("timestamp", "1 days")
 
     aggregatedRatingsDF = aggregatedRatingsDF.groupBy(window("timestamp", "30 days"), "movie_id") \
         .agg(
@@ -75,14 +75,14 @@ def real_time_processing(ratingsDF, movies, jdbc_url, jdbc_user, jdbc_password, 
     if processing_mode == "C":
         aggregatedRatingsQuery = aggregatedRatingsDF \
             .writeStream \
-            .outputMode("complete") \
+            .outputMode("append") \
             .foreachBatch(lambda batchDF, batchId: save_to_jdbc(batchDF, jdbc_url, jdbcProperties)) \
             .option("checkpointLocation", "/tmp/checkpoints/aggregatedRatings") \
             .trigger(processingTime="20 second") \
             .start()
 
 
-def save_to_jdbc(batchDF, jdbc_url, jdbcProperties, mode="overwrite"):
+def save_to_jdbc(batchDF, jdbc_url, jdbcProperties, mode="append"):
     batchDF.write.mode(mode).jdbc(jdbc_url, "movie_ratings", properties=jdbcProperties)
 
 
